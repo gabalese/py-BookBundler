@@ -1,10 +1,11 @@
-import sys
 import os
+import subprocess
 from flask import Flask, request
 from werkzeug.utils import secure_filename
-import subprocess
-from PIL import Image, ExifTags
 
+from PIL import Image
+
+from matching import matches
 from orientation import fix_orientation
 
 UPLOAD_FOLDER = 'uploads/'
@@ -18,23 +19,8 @@ ALLOWED_EXTENSIONS = {'pdf',
                       'tiff'}
 
 app = Flask(__name__)
-app.debug = False  # True
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # else, return RequestEntityTooLarge
-
-
-# logica di base del matching
-def matches(file1, file2):
-    lista1 = open(file1, "r").readlines()
-    lista2 = open(file2, "r").readlines()
-
-    for i in lista1:
-        for v in lista2:
-            if map(len, i.split(" ")) == map(len, v.split(" ")):
-                if i == v:
-                    return True
-    else:
-        return False
 
 
 def allowed_file(filename):
