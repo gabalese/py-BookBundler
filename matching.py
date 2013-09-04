@@ -2,6 +2,7 @@ def matches(source, destination):
     """
     Basic mathing algorithm. Double iteration over src & dst, if the tuple of len matches for a line,
     find a match of string contents. One match is considered exhaustive, for now.
+
     :param source: list of input text
     :type source: list
     :param destination: list of reference text

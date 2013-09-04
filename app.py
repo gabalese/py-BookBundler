@@ -37,8 +37,8 @@ def upload_file():
         sent_file = request.files['file']
         if sent_file and allowed_file(sent_file.filename):
 
-            # escape malicious filename
-            filename = secure_filename(os.tempnam()+sent_file.filename)
+            # escape malicious filename, set random temporary filename [process-safer]
+            filename = secure_filename(os.tempnam(None, "src_")+sent_file.filename)
 
             # save image in upload folder
             sent_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
