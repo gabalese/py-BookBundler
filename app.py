@@ -1,11 +1,15 @@
 import os
 import subprocess
-from flask import Flask, request, render_template
+import urllib2
+import json
+
+from flask import Flask, request, render_template, Response
 from werkzeug.utils import secure_filename
 
 from PIL import Image
 
 from matching import matches
+from database import Database
 from orientation import fix_orientation
 
 UPLOAD_FOLDER = 'uploads/'
@@ -23,13 +27,30 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # else, return RequestEntityTooLarge
 
 
+def getremoteinfo(url):
+    wget = urllib2.urlopen(url)
+    result = json.JSONDecoder().decode(wget.read().encode("utf-8"))
+    return result
+
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
 
 
-@app.route('/', methods=['GET', 'POST'])
-def upload_file():
+def cleanup(*args):
+    map(os.remove, args)
+
+
+@app.route("/", methods=['GET'])
+def main():
+    url = "http://www.edizionieo.it/jsonfeed.php?get=ebook&qt={qt}".format(qt=5)
+    result = getremoteinfo(url)
+    return render_template("list.html", list=result)
+
+
+@app.route('/book/<int:isbn>', methods=['GET', 'POST'])
+def upload_file(isbn):
     """
     As http://flask.pocoo.org/docs/patterns/fileuploads/
     """
@@ -69,13 +90,17 @@ def upload_file():
 
             # temporary file context
             # replace with call to mongo
-            with open("isola_target.txt") as f:
-                source = f.readlines()
+
+            # result = mongo.books.findOne({"identifier":isbn})
+            # source = result["identifier"]
+            db = Database()
+            destination = db.querydocument(isbn)["contents"]
 
             # this one will last
             with open(temp+".txt") as g:
-                destination = g.readlines()
+                source = g.readlines()
 
+            #return "LOL"
             if matches(source, destination):  # the fixed file should be replaced with an array from dict
                 # main OK response call
                 return """
@@ -109,12 +134,11 @@ def upload_file():
             # I should throw a proper HTTP Status instead...
 
     if request.method == 'GET':
-        return '''
-                <!doctype html>
-                <title>Upload new File</title>
-                <h1>Upload new File</h1>
-                <form action="" method=post enctype=multipart/form-data>
-                <p><input type=file name=file accept="image/*" capture="camera">
-                <input type=submit value=Upload>
-                </form>
-                '''
+        try:
+            url = "http://www.edizionieo.it/jsonfeed.php?search={isbn}".format(isbn=isbn)
+            result = getremoteinfo(url)
+        except urllib2.HTTPError:
+            return Response("Nope.", 500)
+        if not result:
+            return Response("Nope.", 404)
+        return render_template("single.html", book=result[0])
