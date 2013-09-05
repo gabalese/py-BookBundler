@@ -3,7 +3,7 @@ import subprocess
 import urllib2
 import json
 
-from flask import Flask, request, render_template, Response
+from flask import Flask, request, render_template, Response, make_response
 from werkzeug.utils import secure_filename
 
 from PIL import Image, ImageFilter
@@ -93,7 +93,7 @@ def upload_file(isbn):
                 # mute stdin and stderr
                 subprocess.check_call(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             except subprocess.CalledProcessError:
-                return "Command unsuccessfull!"
+                return Response("Internal server error", 500)
 
             # temporary file context
             # replace with call to mongo
@@ -114,35 +114,14 @@ def upload_file(isbn):
             if matches(source, destination):  # the fixed file should be replaced with an array from dict
                 cleanup(img_name, temp+".txt", os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 # main OK response call
-                return """
-                        <!doctype html>
-                        <html style="height: 100%">
-                        <head>
-                        <title>Success!</title>
-                        </head>
-                        <body style="height: 100%">
-                        <p style="background-color: green; min-height: 100%;">&nbsp;</p>
-                        </body>
-                        </html>
-                        """
+                return render_template("download.html")
             else:
                 # main KO response call
                 # render a fail template?
-                return """
-                        <!doctype html>
-                        <html style="height: 100%">
-                        <head>
-                        <title>Fail!</title>
-                        </head>
-                        <body style="height: 100%">
-                        <p style="background-color: red; min-height: 100%;">&nbsp;</p>
-                        </body>
-                        </html>
-                        """
+                return render_template("nodownload.html")
         else:
         # if not allowed_file ...
-            return "NOPE."
-            # I should throw a proper HTTP Status instead...
+            return make_response(render_template("error.html"), 500)
 
     if request.method == 'GET':
         try:
