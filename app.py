@@ -6,10 +6,10 @@ import json
 from flask import Flask, request, render_template, Response
 from werkzeug.utils import secure_filename
 
-from PIL import Image
+from PIL import Image, ImageFilter
 
 from matching import matches
-from database import Database
+from database import Database, EmptyResult
 from orientation import fix_orientation
 
 UPLOAD_FOLDER = 'uploads/'
@@ -44,8 +44,13 @@ def cleanup(*args):
 
 @app.route("/", methods=['GET'])
 def main():
-    url = "http://www.edizionieo.it/jsonfeed.php?get=ebook&qt={qt}".format(qt=5)
-    result = getremoteinfo(url)
+    #url = "http://www.edizionieo.it/jsonfeed.php?get=ebook&qt={qt}".format(qt=5)
+    baseurl = "http://www.edizionieo.it/jsonfeed.php?search={isbn}"
+    db = Database()
+    result = []
+    for bid in db.availableidentifiers():
+        info = getremoteinfo(baseurl.format(isbn=bid))
+        result += info
     return render_template("list.html", list=result)
 
 
@@ -69,7 +74,9 @@ def upload_file(isbn):
             fix_orientation(os.path.join(app.config['UPLOAD_FOLDER'], filename), save_over=True)
 
             # open image and convert to BW
-            img = Image.open(os.path.join(app.config['UPLOAD_FOLDER'], filename)).convert('LA')
+            img = Image.open(os.path.join(app.config['UPLOAD_FOLDER'], filename)).convert('L')
+            img = img.filter(ImageFilter.DETAIL)
+            img = img.filter(ImageFilter.SHARPEN)
 
             # save BW'd image on disk
             img_name = os.tempnam("uploads/", "img_")+".png"
@@ -79,7 +86,7 @@ def upload_file(isbn):
             temp = os.tempnam("uploads/", "tess_")
 
             # prepare tesseract shell spawn
-            command = ["tesseract", img_name, temp, "-l ita"]
+            command = ["tesseract", img_name, temp, "-l ita", "-psm 6"]
 
             try:
                 # spawn process, wait and intercept any non-zero exit status
@@ -94,7 +101,10 @@ def upload_file(isbn):
             # result = mongo.books.findOne({"identifier":isbn})
             # source = result["identifier"]
             db = Database()
-            destination = db.querydocument(isbn)["contents"]
+            try:
+                destination = db.querydocument(isbn)["contents"]
+            except EmptyResult:
+                return Response("Inactive publication", 404)
 
             # this one will last
             with open(temp+".txt") as g:
@@ -102,6 +112,7 @@ def upload_file(isbn):
 
             #return "LOL"
             if matches(source, destination):  # the fixed file should be replaced with an array from dict
+                cleanup(img_name, temp+".txt", os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 # main OK response call
                 return """
                         <!doctype html>
@@ -141,4 +152,6 @@ def upload_file(isbn):
             return Response("Nope.", 500)
         if not result:
             return Response("Nope.", 404)
-        return render_template("single.html", book=result[0])
+        db = Database()
+        pg = db.querydocument(isbn)["page"]
+        return render_template("single.html", book=result[0], page=pg)
