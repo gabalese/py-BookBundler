@@ -3,13 +3,13 @@ import subprocess
 import urllib2
 import json
 
-from flask import Flask, request, render_template, Response, make_response
+from flask import Flask, request, render_template, make_response
 from werkzeug.utils import secure_filename
 
 from PIL import Image, ImageFilter
 
 from matching import matches
-from database import Database, EmptyResult
+import database
 from orientation import fix_orientation
 
 UPLOAD_FOLDER = 'uploads/'
@@ -46,7 +46,7 @@ def cleanup(*args):
 def main():
     #url = "http://www.edizionieo.it/jsonfeed.php?get=ebook&qt={qt}".format(qt=5)
     baseurl = "http://www.edizionieo.it/jsonfeed.php?search={isbn}"
-    db = Database()
+    db = database.Database()
     result = []
     for bid in db.availableidentifiers():
         info = getremoteinfo(baseurl.format(isbn=bid))
@@ -57,7 +57,7 @@ def main():
 @app.route('/book/<int:isbn>', methods=['GET', 'POST'])
 def upload_file(isbn):
     """
-    As http://flask.pocoo.org/docs/patterns/fileuploads/
+    Main program logic.
     """
     if request.method == 'POST':
         sent_file = request.files['file']
@@ -71,11 +71,15 @@ def upload_file(isbn):
 
             # use PIL to fix orientation EXIF data for iPhone
             # TODO: is this valid for Android too?
-            fix_orientation(os.path.join(app.config['UPLOAD_FOLDER'], filename), save_over=True)
-
+            try:
+                fix_orientation(os.path.join(app.config['UPLOAD_FOLDER'], filename), save_over=True)
+            except AttributeError:  # the picture does not have any EXIF. Move on, move on
+                pass
             # open image and convert to BW
-            img = Image.open(os.path.join(app.config['UPLOAD_FOLDER'], filename)).convert('L')
+            img = Image.open(os.path.join(app.config['UPLOAD_FOLDER'], filename)).convert('LA')
+            # enhance details
             img = img.filter(ImageFilter.DETAIL)
+            # de-blurring
             img = img.filter(ImageFilter.SHARPEN)
 
             # save BW'd image on disk
@@ -86,41 +90,43 @@ def upload_file(isbn):
             temp = os.tempnam("uploads/", "tess_")
 
             # prepare tesseract shell spawn
-            command = ["tesseract", img_name, temp, "-l ita", "-psm 6"]
+            command = ["tesseract", img_name, temp, "-l ita"]
 
             try:
-                # spawn process, wait and intercept any non-zero exit status
+                # spawn process and intercept any non-zero exit status
                 # mute stdin and stderr
-                subprocess.check_call(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                ocr = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+                # the process continues
             except subprocess.CalledProcessError:
-                return Response("Internal server error", 500)
+                return make_response(render_template("error.html"), 500)
 
-            # temporary file context
-            # replace with call to mongo
-
-            # result = mongo.books.findOne({"identifier":isbn})
-            # source = result["identifier"]
-            db = Database()
+            db = database.Database()
             try:
                 destination = db.querydocument(isbn)["contents"]
-            except EmptyResult:
-                return Response("Inactive publication", 404)
+            except database.EmptyResult:
+                return make_response(render_template("error.html"), 404)
+
+            # block while process terminates
+            ocr.communicate()
 
             # this one will last
             with open(temp+".txt") as g:
                 source = g.readlines()
 
             #return "LOL"
+            print source
             if matches(source, destination):  # the fixed file should be replaced with an array from dict
-                cleanup(img_name, temp+".txt", os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                #cleanup(img_name, temp+".txt", os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 # main OK response call
                 return render_template("download.html")
             else:
                 # main KO response call
                 # render a fail template?
+                #return source
                 return render_template("nodownload.html")
         else:
-        # if not allowed_file ...
+            # if not allowed_file ...
             return make_response(render_template("error.html"), 500)
 
     if request.method == 'GET':
@@ -128,9 +134,9 @@ def upload_file(isbn):
             url = "http://www.edizionieo.it/jsonfeed.php?search={isbn}".format(isbn=isbn)
             result = getremoteinfo(url)
         except urllib2.HTTPError:
-            return Response("Nope.", 500)
+            return make_response(render_template("error.html"), 500)
         if not result:
-            return Response("Nope.", 404)
-        db = Database()
+            return make_response(render_template("error.html"), 404)
+        db = database.Database()
         pg = db.querydocument(isbn)["page"]
         return render_template("single.html", book=result[0], page=pg)

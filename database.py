@@ -1,5 +1,4 @@
 import pymongo
-import json
 
 
 class EmptyResult(Exception):
