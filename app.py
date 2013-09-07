@@ -11,6 +11,7 @@ from PIL import Image, ImageFilter
 from matching import matches
 import database
 from orientation import fix_orientation
+from authenticate import basicauth
 
 UPLOAD_FOLDER = 'uploads/'
 ALLOWED_EXTENSIONS = {'pdf',
@@ -62,13 +63,10 @@ def upload_file(isbn):
     if request.method == 'POST':
         sent_file = request.files['file']
         if sent_file and allowed_file(sent_file.filename):
-
             # escape malicious filename, set random temporary filename [process-safer]
             filename = secure_filename(os.tempnam(None, "src_")+sent_file.filename)
-
             # save image in upload folder
             sent_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-
             # use PIL to fix orientation EXIF data for iPhone
             # TODO: is this valid for Android too?
             try:
@@ -81,22 +79,17 @@ def upload_file(isbn):
             img = img.filter(ImageFilter.DETAIL)
             # de-blurring
             img = img.filter(ImageFilter.SHARPEN)
-
             # save BW'd image on disk
             img_name = os.tempnam("uploads/", "img_")+".png"
             img.save(img_name)
-
             # temporary filename
             temp = os.tempnam("uploads/", "tess_")
-
             # prepare tesseract shell spawn
             command = ["tesseract", img_name, temp, "-l ita"]
-
             try:
                 # spawn process and intercept any non-zero exit status
                 # mute stdin and stderr
                 ocr = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
                 # the process continues
             except subprocess.CalledProcessError:
                 return make_response(render_template("error.html"), 500)
@@ -110,20 +103,17 @@ def upload_file(isbn):
             # block while process terminates
             ocr.communicate()
 
-            # this one will last
             with open(temp+".txt") as g:
                 source = g.readlines()
 
-            #return "LOL"
             print source
             if matches(source, destination):  # the fixed file should be replaced with an array from dict
-                #cleanup(img_name, temp+".txt", os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                cleanup(img_name, temp+".txt", os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 # main OK response call
                 return render_template("download.html")
             else:
+                cleanup(img_name, temp+".txt", os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 # main KO response call
-                # render a fail template?
-                #return source
                 return render_template("nodownload.html")
         else:
             # if not allowed_file ...
@@ -140,3 +130,36 @@ def upload_file(isbn):
         db = database.Database()
         pg = db.querydocument(isbn)["page"]
         return render_template("single.html", book=result[0], page=pg)
+
+
+@app.route("/new/", methods=["GET","POST"], defaults={"isbn": None})
+@app.route("/new/<int:isbn>", methods=["POST", "GET"])
+@basicauth(username="user", password="pass")  # credentials should be fetched somewhere else...
+def create_resource(isbn):
+    if request.method == "GET":
+        if isbn is not None:
+            return """<!doctype html>
+                        <title>Upload new File</title>
+                        <h1>Upload new File</h1>
+                        <form action="/new/" method=post enctype=multipart/form-data>
+                        <input type=hidden name={isbn}>
+                        <p><input type=file name=file accept="image/*" capture="camera">
+                        <input type=submit value=Upload>
+                        </form>""".format(isbn=isbn)
+        else:
+            return """<!doctype html>
+                        <title>Upload new File</title>
+                        <h1>Upload new File</h1>
+                        <form action="" method=post enctype=multipart/form-data>
+                        <input type=text name=isbn>
+                        <p><input type=file name=file accept="image/*" capture="camera">
+                        <input type=submit value=Upload>
+                        </form>"""
+
+    if request.method == "POST":
+        if request.form["isbn"]:
+            return "{isbn}".format(isbn=request.form["isbn"])
+        else:
+            return make_response(render_template("error.html"), 403)
+    if request.method == "DELETE":
+        raise NotImplementedError

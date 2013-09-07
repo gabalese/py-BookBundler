@@ -1,3 +1,5 @@
+# Thanks @kylefox
+# https://github.com/kylefox/python-image-orientation-patch
 from PIL import Image, ImageFile
 
 # PIL's Error "Suspension not allowed here" work around:
