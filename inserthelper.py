@@ -3,7 +3,8 @@ import os
 
 DIRECTORY = "pages/"
 
-# main logic
+# helper script to add target contents to db
+# could be refactored to accept a list of files via shell expansion
 
 if __name__ == "__main__":
     # test script

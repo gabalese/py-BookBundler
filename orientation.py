@@ -37,8 +37,8 @@ def fix_orientation(img, save_over=False):
         raise ValueError("You can't use `save_over` when passing an Image instance.  Use a file path instead.")
     try:
         orientation = img._getexif()[EXIF_ORIENTATION_TAG]
-    except TypeError:
-        return (img, 0)
+    except (TypeError, KeyError):
+        return img, 0
     if orientation in [3, 6, 8]:
         degrees = ORIENTATIONS[orientation][1]
         img = img.rotate(degrees)
@@ -50,7 +50,6 @@ def fix_orientation(img, save_over=False):
                 # larger than ImageFile.MAXBLOCK, which is 64k by default).
                 # Setting ImageFile.MAXBLOCK should fix this....but who knows.
                 img.save(path, quality=95)
-        return (img, degrees)
+        return img, degrees
     else:
-        return (img, 0)
-
+        return img, 0

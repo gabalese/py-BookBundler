@@ -1,5 +1,6 @@
 from app import app
-# basic test server. Change with something more efficient like Tornado or Gunicorn in production
+# basic test server. NOT SUITABLE FOR PRODUCTION.
+# Use a wsgi wrapper like geven, gunicorn or tornado for deployement.
 
 if __name__ == "__main__":
     app.debug = True  # lotta stuff on your stdout

@@ -9,7 +9,7 @@ SOURCE_MATCH_THRESOLD = 0.6     # if required, can be changed at the module leve
 
 def matches(source, destination):
     """
-    Improved mathing algorithm. Double iterating over src & dst lines, calculate the match ratio of each line couple
+    Basic mathing algorithm. Double iterating over src & dst lines, calculate the match ratio of each line couple
     and increase the counter for each sufficient match. If enough lines match, return true.
 
     :param source: list of input text

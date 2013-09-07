@@ -10,6 +10,9 @@ class DatabaseError(Exception):
 
 
 class Database():
+    """
+    database class wrapper around MongoClient
+    """
     def __init__(self, dbname="default", collection="books"):
         self.client = pymongo.MongoClient()
         self.db = self.client[dbname]
@@ -29,8 +32,19 @@ class Database():
         return [i["identifier"].encode("utf-8") for i in result]
 
     def inserttxt(self, txtfile):
+        """
+        Helper function to insert target contents in db via list of files
+        Each file must have publication identifier in first line, target page number on second line,
+        then
+
+        :param txtfile: file
+        :return: object_id
+        """
         with open(txtfile) as f:
-            txt = f.readlines()
+            try:
+                txt = f.readlines()
+            except Exception:
+                raise RuntimeError
             identifier = txt[0].rstrip()
             page = txt[1].rstrip()
             contents = txt[2:]
@@ -38,3 +52,6 @@ class Database():
             insert = {"identifier": identifier, "page": page, "contents": contents}
 
             return self.collection.save(insert)
+
+    def insertreferencepage(self, identifier, page, contents):
+        return self.collection.save({"identifier": identifier, "page": page, "contents": contents})

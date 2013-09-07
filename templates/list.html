@@ -5,12 +5,7 @@
 </head>
 <body>
 {% for i in list %}
-    <a href="book/{{ i["isbn"] }}">
-    <img src="{{ i["copertina"] }}" />
-    </a>
-    <p>{{ i["autore"] }}, {{ i["titolo"] }}</p>
-    <p>{{ i["descrizione"] }}</p>
-    <p>{{ i["prezzo"].replace(".","") }}</p>
+    <p><a href="/book/{{ i }}" >{{ i }}</a></p>
 
 {% endfor %}
 </body>

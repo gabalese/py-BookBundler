@@ -1,14 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{{ book["titolo"] }}</title>
+    <title>{{ book["identifier"] }}</title>
 </head>
 <body>
-    <h1>{{ book["titolo"] }}</h1>
-    <h2>{{ book["autore"] }}</h2>
-    <p>{{ book["descrizione"] }}</p>
-    <img src="{{ book["copertina"] }}" />
-    <h2>Scatta una foto a pagina: {{ page }}</h2>
+    <h1>{{ book["identifier"] }}</h1>
+    <h2>Shoot a picture of page: {{ book["page"] }}</h2>
     <form action="" method=post enctype=multipart/form-data>
     <p><input type=file name=file accept="image/*" capture="camera">
     <input type=submit value=upload>
