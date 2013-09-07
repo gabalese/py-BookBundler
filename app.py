@@ -113,10 +113,13 @@ def main(isbn):
             if matches(source, destination):  # the fixed file should be replaced with an array from dict
                 cleanup(img_name, temp+".txt", os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 # main OK response call
+                # like calling an external webservice to enable a download
+                # or authorizing a local download
                 return render_template("download.html")
             else:
                 cleanup(img_name, temp+".txt", os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 # main KO response call
+                # Should show a friendlier message
                 return render_template("nodownload.html")
         else:
             # if not allowed_file ...
