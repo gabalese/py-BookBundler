@@ -1,7 +1,7 @@
 py-BookBundler
 =============
 
-A python Flask webapp to enable publishers to bundle ebooks with paper books, providing that they can upload a picture of a page. The uploaded picture is ocr-ed and if it matches the target page inserted by the operator a download page is shown.
+A python Flask webapp to enable publishers to bundle ebooks with paper books, providing that they can upload a picture of a page. The uploaded picture is ocr-ed with [tesseract-ocr](https://code.google.com/p/tesseract-ocr/) and if it matches the target page inserted by the operator a download page is shown. The algorithm in `matching.py` tries to guess if source and destination are similar enough, since a byte-perfect match is pure utopia.
 
 API
 ---
@@ -15,10 +15,10 @@ The app exposes a RESTful API.
 
 Requirements
 ------------
-A working installation of [tesseract-ocr](https://code.google.com/p/tesseract-ocr/);
-tesseract-ocr Italian language files (or change the `app.py:91` and `app.py:181` language setting with `-l eng`).
-A mongodb instance running on the same server as py-BookBundler
-See `requirements.txt` for python dependencies.
+* A working installation of [tesseract-ocr](https://code.google.com/p/tesseract-ocr/);
+* tesseract-ocr Italian language files (or change the `app.py:91` and `app.py:181` language setting with `-l eng`).
+* A mongodb instance running on the same server as py-BookBundler
+* See `requirements.txt` for python dependencies.
 
 License
 -------
