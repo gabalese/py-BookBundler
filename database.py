@@ -13,7 +13,7 @@ class Database():
     """
     database class wrapper around MongoClient
     """
-    def __init__(self, dbname="default", collection="books"):
+    def __init__(self, dbname="bookbundler", collection="books"):
         self.client = pymongo.MongoClient()
         self.db = self.client[dbname]
         self.collection = self.db[collection]
