@@ -7,11 +7,11 @@ API
 ---
 The app exposes a RESTful API.
 
-`GET /`: returns a list of available publications.
-`GET /book/<isbn>`: presents the user with a form to upload a picture of the target page.
-`POST /book/<isbn>`: invoked by a form, takes the picture and spawns the ocr.
-`GET /new`:[basic-auth] presents the operator with a form to load data about a new publication.
-`POST /new/<isbn>` [basic-auth] creates the new publication.
+* `GET /`: returns a list of available publications.
+* `GET /book/<isbn>`: presents the user with a form to upload a picture of the target page.
+* `POST /book/<isbn>`: invoked by a form, takes the picture and spawns the ocr.
+* `GET /new`:[basic-auth] presents the operator with a form to load data about a new publication.
+* `POST /new/<isbn>` [basic-auth] creates the new publication.
 
 Requirements
 ------------
